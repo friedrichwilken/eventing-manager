@@ -6,7 +6,7 @@ on:
       DRY_RUN:
         type: boolean
         default: false
-        description: "Dry run: setting this to `true` will skip the final step of publishing the release, leaving it as a draft-release. This can be helpful for testing and debugging. Note that the tag and release are still getting generated and the next run of this result in incremented release version. To avoid this, do not forget to delete the resulting release and tag."
+        description: "Dry run: setting this to `true` will skip the final step of publishing the release, leaving it as a draft-release. This can be helpful for testing and debugging the release process. Note that the tag and release are still getting generated and the next run of this result in incremented release version. To avoid this, do not forget to delete the resulting release and tag."
 
 jobs:
   gen-version:
@@ -47,6 +47,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
   create-draft-release:
+    # Here we will create a release (including the changelog) but mark it as a draft.
     name: Create a draft release
     needs: [gen-version, run-unit-test, run-golint-cli, build-image]
     uses: kyma-project/eventing-tools/.github/workflows/create-draft-release-reusable.yml@d491378dbbeef63bf8616f1a1b2b1a49ea5f9eeb
@@ -57,12 +58,15 @@ jobs:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
   render-and-upload-manifest:
+    # Here we will render the CRD and upload it alongside the CR.
     name: Render and upload the manifests
     needs: [gen-version, create-draft-release, build-image]
     uses: kyma-project/eventing-tools/.github/workflows/render-and-upload-manifests-reusable.yml@d491378dbbeef63bf8616f1a1b2b1a49ea5f9eeb
     with:
       VERSION: ${{ needs.gen-version.outputs.VERSION }}
+      # We will render this file:
       CR_FILE: eventing-default-cr.yaml
+      # We will take config/samples/default.yaml and  "rename" it to the desired filename:
       CRD_FILE: eventing-manager.yaml
     secrets:
       BOT_PAT: ${{ secrets.BOT_PAT }}
